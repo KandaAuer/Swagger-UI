@@ -2,62 +2,80 @@ package ru.hogwarts.school.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import ru.hogwarts.school.model.Student;
+import ru.hogwarts.school.repository.StudentRepository;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class StudentServiceTest {
-
-    private StudentService studentService;
+    @Mock
+    StudentRepository repository;
+    @InjectMocks
+    StudentService service;
+    Student student = new Student(1L, "Гарри", 11);
 
     @BeforeEach
-    void setUp() {
-        studentService = new StudentServiceImpl();
+    public void setup() {
+        MockitoAnnotations.initMocks(this);
+        service = new StudentService(repository);
+    }
+    @Test
+    void addStudent(){
+        when(repository.save(student)).thenReturn(student);
+        Student result = service.addStudent(student);
+        assertEquals(student, result);
     }
 
     @Test
-    void testCreateStudent() {
-        Student student = studentService.createStudent(new Student("Ron", 11));
-        assertNotNull(student);
-        assertEquals("Ron", student.getName());
-        assertEquals(11, student.getAge());
+    void findStudent_shouldReturnStudent() {
+        when(repository.findById(student.getId()))
+                .thenReturn(Optional.of(student));
+        Student result = service.findStudent(student.getId());
+        assertEquals(student, result);
+    }
+    @Test
+    void editStudent() {
+        Mockito.when(repository.findById(student.getId()))
+                .thenReturn(Optional.of(student));
+        Mockito.when(repository.save(student)).thenReturn(student);
+        Student result = service.editStudent(student.getId(), student);
+        Mockito.verify(repository).findById(student.getId());
+        Mockito.verify(repository).save(student);
+        assertEquals(student, result);
     }
 
     @Test
-    void testReadStudent() {
-        Student student = studentService.createStudent(new Student("Draco", 11));
-        Student foundStudent = studentService.readStudent(student.getId());
-        assertNotNull(foundStudent);
-        assertEquals(student.getId(), foundStudent.getId());
+    public void testRemoveStudent() {
+        long id = 1L;
+        Student student = new Student(id, "Илья", 25);
+        Mockito.when(repository.findById(id)).thenReturn(Optional.of(student));
+        Student result = service.removeStudent(id);
+        Mockito.verify(repository).findById(id);
+        Mockito.verify(repository).delete(student);
+        assertEquals(student, result);
     }
 
     @Test
-    void testUpdateStudent() {
-        Student student = studentService.createStudent(new Student("Harry", 11));
-        student.setName("Harry Potter");
-        student.setAge(12);
-        Student updatedStudent = studentService.updateStudent(student);
-        assertNotNull(updatedStudent);
-        assertEquals("Harry Potter", updatedStudent.getName());
-        assertEquals(12, updatedStudent.getAge());
-    }
-
-    @Test
-    void testDeleteStudent() {
-        Student student = studentService.createStudent(new Student("Hermione", 11));
-        Student deletedStudent = studentService.deleteStudent(student.getId());
-        assertNotNull(deletedStudent);
-        assertEquals(student.getId(), deletedStudent.getId());
-    }
-
-    @Test
-    void testFindByAge() {
-        studentService.createStudent(new Student("Neville", 12));
-        studentService.createStudent(new Student("Luna", 11));
-        List<Student> students = (List<Student>) studentService.findByAge(11);
-        assertEquals(1, students.size());
-        assertEquals("Luna", students.get(0).getName());
+    void findByAge() {
+        int age = 25;
+        Collection<Student> students = new ArrayList<>();
+        students.add(new Student(1L, "Илья", age));
+        students.add(new Student(2L, "Алиса", age));
+        Mockito.when(repository.findAllByAge(age)).thenReturn(students);
+        Collection<Student> result = service.findByAge(age);
+        Mockito.verify(repository).findAllByAge(age);
+        assertEquals(students, result);
     }
 }
